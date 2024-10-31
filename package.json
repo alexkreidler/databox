@@ -1,0 +1,45 @@
+{
+  "name": "chakra-vite-starter",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@chakra-ui/react": "^3.0.2",
+    "@duckdb/duckdb-wasm": "1.29.1-dev12.0",
+    "@emotion/react": "^11.13.3",
+    "@glideapps/glide-data-grid": "^6.0.3",
+    "@iconify/react": "^5.0.2",
+    "@monaco-editor/react": "^4.6.0",
+    "@saas-ui/react": "^2.8.11",
+    "apache-arrow": "^17.0.0",
+    "change-case": "^5.4.4",
+    "duckdb-wasm-kit": "^0.1.38",
+    "flexlayout-react": "^0.8.1",
+    "lodash": "^4.17.21",
+    "next-themes": "^0.3.0",
+    "pretty-bytes": "^6.1.1",
+    "react": "^18.3.1",
+    "react-async-hook": "^4.0.0",
+    "react-complex-tree": "^2.4.5",
+    "react-dom": "^18.3.1",
+    "react-dropzone": "^14.2.10",
+    "react-icons": "^5.3.0",
+    "react-virtualized-auto-sizer": "^1.0.24"
+  },
+  "devDependencies": {
+    "@ark-ui/react": "^4.2.0",
+    "@biomejs/biome": "^1.9.4",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react-swc": "^3.7.1",
+    "monaco-editor": "^0.52.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "vite-tsconfig-paths": "^5.0.1"
+  }
+}

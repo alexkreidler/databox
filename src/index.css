@@ -1,0 +1,12 @@
+:root {
+	font-family: "Inter", Arial, sans-serif;
+}
+
+#root {
+	height: 100vh;
+}
+
+.flexlayout__layout {
+	--font-family: "Inter", Arial, sans-serif;
+	--font-size: small;
+}
