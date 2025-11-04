@@ -20,10 +20,7 @@ function convertArrowTypeToDataGridIcon(type: DataType): GridColumnIcon {
 	if (DataType.isUtf8(type)) {
 		return GridColumnIcon.HeaderString;
 	}
-	if (DataType.isInt(type)) {
-		return GridColumnIcon.HeaderNumber;
-	}
-	if (DataType.isFloat(type)) {
+	if (DataType.isInt(type) || DataType.isFloat(type) || DataType.isDecimal(type)) {
 		return GridColumnIcon.HeaderNumber;
 	}
 	if (DataType.isBool(type)) {
@@ -42,7 +39,7 @@ function convertArrowTypeToDataGridIcon(type: DataType): GridColumnIcon {
 	if (DataType.isNull(type)) {
 		return GridColumnIcon.HeaderSingleValue;
 	}
-	throw new Error("No data type found for " + type);
+	return GridColumnIcon.HeaderString;
 }
 
 type GridCoordinate = readonly [number, number];
