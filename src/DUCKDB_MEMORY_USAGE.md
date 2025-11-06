@@ -32,7 +32,7 @@ import { runQuery, type AsyncDuckDB } from 'duckdb-wasm-kit';
 
 // This function should be called from a React component or custom hook
 // where you have access to the db instance from useDuckDb()
-async function getDuckDBMemoryLimit(db: AsyncDuckDB) {
+async function getDuckDBMemoryLimit(db: AsyncDuckDB | null) {
   if (!db) {
     throw new Error('Database not initialized');
   }
@@ -70,7 +70,11 @@ This returns settings such as:
 ```typescript
 import { runQuery, type AsyncDuckDB } from 'duckdb-wasm-kit';
 
-async function getDuckDBMemorySettings(db: AsyncDuckDB) {
+async function getDuckDBMemorySettings(db: AsyncDuckDB | null) {
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+  
   try {
     const result = await runQuery(
       db, 
@@ -245,7 +249,11 @@ function hasMemoryAPI(perf: Performance): perf is Performance & { memory: Perfor
   return 'memory' in perf && perf.memory !== undefined;
 }
 
-async function executeQueryWithMemoryMonitoring(db: AsyncDuckDB, query: string) {
+async function executeQueryWithMemoryMonitoring(db: AsyncDuckDB | null, query: string) {
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+  
   const hasMemory = hasMemoryAPI(performance);
   const beforeMemory = hasMemory ? performance.memory.usedJSHeapSize : null;
   const startTime = performance.now();
