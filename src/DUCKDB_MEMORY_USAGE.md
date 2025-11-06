@@ -18,6 +18,8 @@ PRAGMA memory_limit;
 ```
 Returns the current memory limit set for DuckDB. By default, this is typically 80% of available system memory, but in browser environments, it's constrained by the WebAssembly memory limits.
 
+**Note:** This returns the configured memory limit, not the actual current usage. For actual memory usage, query `PRAGMA database_size` or use the WebAssembly memory APIs described below.
+
 #### Get Maximum Memory
 ```sql
 PRAGMA max_memory;
@@ -26,10 +28,11 @@ Shows the maximum amount of memory DuckDB is allowed to use.
 
 #### Example Implementation
 ```typescript
-import { useDuckDb, runQuery } from 'duckdb-wasm-kit';
+import { runQuery, type AsyncDuckDB } from 'duckdb-wasm-kit';
 
-async function getDuckDBMemoryLimit() {
-  const { db } = useDuckDb();
+// This function should be called from a React component or custom hook
+// where you have access to the db instance from useDuckDb()
+async function getDuckDBMemoryLimit(db: AsyncDuckDB) {
   if (!db) {
     throw new Error('Database not initialized');
   }
@@ -44,6 +47,10 @@ async function getDuckDBMemoryLimit() {
     throw new Error(`Failed to fetch memory limit: ${message}`);
   }
 }
+
+// Usage in a React component:
+// const { db } = useDuckDb();
+// const memoryLimit = await getDuckDBMemoryLimit(db);
 ```
 
 ### 2. Using Database Statistics Queries
@@ -142,6 +149,8 @@ export const DuckDBMemoryStats = () => {
     
     try {
       // Run queries in parallel for better performance
+      // Note: DuckDB WASM generally supports concurrent queries,
+      // but if you experience issues, run them sequentially instead
       const [memoryLimitResult, settingsResult, dbStatsResult] = await Promise.all([
         runQuery(db, 'PRAGMA memory_limit'),
         runQuery(db, "SELECT * FROM duckdb_settings() WHERE name LIKE '%memory%'"),
@@ -177,10 +186,12 @@ You can configure DuckDB's memory limit when initializing it:
 ```typescript
 import { initializeDuckDb } from 'duckdb-wasm-kit';
 
-// Initialize with custom memory limit (in bytes)
+// Initialize with custom memory limit
+// Accepts string format (e.g., '512MB', '1GB') or numeric bytes
 await initializeDuckDb({
   config: {
-    memory_limit: '512MB', // or '1GB', etc.
+    memory_limit: '512MB', // String format
+    // or: memory_limit: 536870912, // Numeric bytes (512MB)
   }
 });
 ```
@@ -201,11 +212,10 @@ When cross-origin isolation is enabled (`crossOriginIsolated` is true), you get 
 Use the Storage API to monitor OPFS (Origin Private File System) usage:
 
 ```typescript
-async function getStorageUsage() {
+async function getStorageUsage(): Promise<{ usage: number; quota: number } | { error: string }> {
   const estimate = await navigator.storage?.estimate();
   if (!estimate) {
-    console.log('Storage API not supported');
-    return null;
+    return { error: 'Storage API not supported' };
   }
   const usage = estimate.usage || 0;
   const quota = estimate.quota || 0;
@@ -224,7 +234,7 @@ To monitor query-specific memory usage:
 import { type AsyncDuckDB, runQuery } from 'duckdb-wasm-kit';
 import prettyBytes from 'pretty-bytes';
 
-// Type guard for memory API
+// Shared type definitions
 interface PerformanceMemory {
   jsHeapSizeLimit: number;
   totalJSHeapSize: number;
