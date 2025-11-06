@@ -13,6 +13,9 @@ A data toolbox to run DuckDB queries in your browser.
 - View statistics about memory/OPFS filesystem usage
 
 
+## Documentation
+- [DuckDB Memory Usage Guide](src/DUCKDB_MEMORY_USAGE.md) - Learn how to monitor and retrieve DuckDB memory usage information
+
 ## Contributing
 Check out our [roadmap](ROADMAP.md). PRs are welcome!
 
