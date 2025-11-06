@@ -39,8 +39,9 @@ async function getDuckDBMemoryLimit() {
     const result = await runQuery(db, 'PRAGMA memory_limit');
     return result;
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error fetching memory limit:', error);
-    throw new Error(`Failed to fetch memory limit: ${error.message}`);
+    throw new Error(`Failed to fetch memory limit: ${message}`);
   }
 }
 ```
@@ -70,8 +71,9 @@ async function getDuckDBMemorySettings(db: AsyncDuckDB) {
     );
     return result;
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error fetching memory settings:', error);
-    throw new Error(`Failed to fetch memory settings: ${error.message}`);
+    throw new Error(`Failed to fetch memory settings: ${message}`);
   }
 }
 ```
@@ -199,14 +201,17 @@ When cross-origin isolation is enabled (`crossOriginIsolated` is true), you get 
 Use the Storage API to monitor OPFS (Origin Private File System) usage:
 
 ```typescript
-const estimate = await navigator.storage?.estimate();
-if (!estimate) {
-  console.log('Storage API not supported');
-  return;
+async function getStorageUsage() {
+  const estimate = await navigator.storage?.estimate();
+  if (!estimate) {
+    console.log('Storage API not supported');
+    return null;
+  }
+  const usage = estimate.usage || 0;
+  const quota = estimate.quota || 0;
+  console.log(`Using ${prettyBytes(usage)} of ${prettyBytes(quota)}`);
+  return { usage, quota };
 }
-const usage = estimate.usage || 0;
-const quota = estimate.quota || 0;
-console.log(`Using ${prettyBytes(usage)} of ${prettyBytes(quota)}`);
 ```
 
 This shows the total storage used by DuckDB's persistent storage, which complements in-memory usage.
@@ -235,7 +240,14 @@ async function executeQueryWithMemoryMonitoring(db: AsyncDuckDB, query: string) 
   const beforeMemory = hasMemory ? performance.memory.usedJSHeapSize : null;
   const startTime = performance.now();
   
-  const result = await runQuery(db, query);
+  let result;
+  try {
+    result = await runQuery(db, query);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Query failed:', error);
+    throw new Error(`Query execution failed: ${message}`);
+  }
   
   const afterMemory = hasMemory ? performance.memory.usedJSHeapSize : null;
   const endTime = performance.now();
