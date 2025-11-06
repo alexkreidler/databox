@@ -32,9 +32,8 @@ async function getDuckDBMemoryLimit() {
   const { db } = useDuckDb();
   if (!db) return null;
   
-  const conn = await db.connect();
+  // runQuery handles connection management internally
   const result = await runQuery(db, 'PRAGMA memory_limit');
-  await conn.close();
   
   return result;
 }
@@ -90,11 +89,15 @@ FROM duckdb_tables();
 
 ### 5. Using WebAssembly Memory APIs
 
-In addition to DuckDB-specific queries, you can monitor the WebAssembly memory used by DuckDB:
+In addition to DuckDB-specific queries, you can monitor the WebAssembly memory used by DuckDB. The Stats component in this project uses this approach:
 
 ```typescript
-// Check WebAssembly memory (already partially implemented in Stats.tsx)
-const wasmMemory = (performance as any)?.memory?.usedJSHeapSize;
+// Check WebAssembly heap memory usage (requires Chromium-based browser)
+const memory = {
+  jsHeapSizeLimit: (performance as any)?.memory?.jsHeapSizeLimit,
+  totalJSHeapSize: (performance as any)?.memory?.totalJSHeapSize,
+  usedJSHeapSize: (performance as any)?.memory?.usedJSHeapSize,
+};
 ```
 
 ## Complete Example: Memory Stats Component
@@ -193,23 +196,36 @@ To monitor query-specific memory usage:
 
 ```typescript
 async function executeQueryWithMemoryMonitoring(db, query) {
-  const beforeMemory = (performance as any)?.memory?.usedJSHeapSize;
+  // Check if memory API is available
+  const memoryAPI = (performance as any)?.memory;
+  
+  const beforeMemory = memoryAPI?.usedJSHeapSize;
   const startTime = performance.now();
   
   const result = await runQuery(db, query);
   
-  const afterMemory = (performance as any)?.memory?.usedJSHeapSize;
+  const afterMemory = memoryAPI?.usedJSHeapSize;
   const endTime = performance.now();
   
-  console.log({
-    executionTime: `${(endTime - startTime).toFixed(2)}ms`,
-    memoryDelta: prettyBytes(afterMemory - beforeMemory),
-    currentMemory: prettyBytes(afterMemory)
-  });
+  // Only calculate delta if both measurements are available
+  if (beforeMemory && afterMemory) {
+    console.log({
+      executionTime: `${(endTime - startTime).toFixed(2)}ms`,
+      memoryDelta: prettyBytes(afterMemory - beforeMemory),
+      currentMemory: prettyBytes(afterMemory)
+    });
+  } else {
+    console.log({
+      executionTime: `${(endTime - startTime).toFixed(2)}ms`,
+      note: 'Memory measurements not available (use a Chromium-based browser)'
+    });
+  }
   
   return result;
 }
 ```
+
+**Note:** Memory measurements may not be accurate if garbage collection occurs between measurements. For more reliable monitoring, consider taking multiple measurements and averaging them.
 
 ## Resources
 
