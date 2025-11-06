@@ -32,10 +32,14 @@ async function getDuckDBMemoryLimit() {
   const { db } = useDuckDb();
   if (!db) return null;
   
-  // runQuery handles connection management internally
-  const result = await runQuery(db, 'PRAGMA memory_limit');
-  
-  return result;
+  try {
+    // runQuery handles connection management internally
+    const result = await runQuery(db, 'PRAGMA memory_limit');
+    return result;
+  } catch (error) {
+    console.error('Error fetching memory limit:', error);
+    return null;
+  }
 }
 ```
 
@@ -54,9 +58,9 @@ This returns settings such as:
 
 #### Example Implementation
 ```typescript
-import { runQuery } from 'duckdb-wasm-kit';
+import { runQuery, type AsyncDuckDB } from 'duckdb-wasm-kit';
 
-async function getDuckDBMemorySettings(db) {
+async function getDuckDBMemorySettings(db: AsyncDuckDB) {
   const result = await runQuery(
     db, 
     "SELECT * FROM duckdb_settings() WHERE name LIKE '%memory%'"
@@ -92,12 +96,24 @@ FROM duckdb_tables();
 In addition to DuckDB-specific queries, you can monitor the WebAssembly memory used by DuckDB. The Stats component in this project uses this approach:
 
 ```typescript
-// Check WebAssembly heap memory usage (requires Chromium-based browser)
-const memory = {
-  jsHeapSizeLimit: (performance as any)?.memory?.jsHeapSizeLimit,
-  totalJSHeapSize: (performance as any)?.memory?.totalJSHeapSize,
-  usedJSHeapSize: (performance as any)?.memory?.usedJSHeapSize,
-};
+// Define interface for the Performance memory API (Chromium-based browsers)
+interface PerformanceMemory {
+  jsHeapSizeLimit: number;
+  totalJSHeapSize: number;
+  usedJSHeapSize: number;
+}
+
+// Type guard to check if memory API is available
+function hasMemoryAPI(perf: Performance): perf is Performance & { memory: PerformanceMemory } {
+  return 'memory' in perf && perf.memory !== undefined;
+}
+
+// Check WebAssembly heap memory usage
+const memory = hasMemoryAPI(performance) ? {
+  jsHeapSizeLimit: performance.memory.jsHeapSizeLimit,
+  totalJSHeapSize: performance.memory.totalJSHeapSize,
+  usedJSHeapSize: performance.memory.usedJSHeapSize,
+} : null;
 ```
 
 ## Complete Example: Memory Stats Component
@@ -185,7 +201,9 @@ Use the Storage API to monitor OPFS (Origin Private File System) usage:
 
 ```typescript
 const estimate = await navigator.storage.estimate();
-console.log(`Using ${prettyBytes(estimate.usage)} of ${prettyBytes(estimate.quota)}`);
+const usage = estimate.usage || 0;
+const quota = estimate.quota || 0;
+console.log(`Using ${prettyBytes(usage)} of ${prettyBytes(quota)}`);
 ```
 
 This shows the total storage used by DuckDB's persistent storage, which complements in-memory usage.
@@ -195,20 +213,32 @@ This shows the total storage used by DuckDB's persistent storage, which compleme
 To monitor query-specific memory usage:
 
 ```typescript
-async function executeQueryWithMemoryMonitoring(db, query) {
-  // Check if memory API is available
-  const memoryAPI = (performance as any)?.memory;
-  
-  const beforeMemory = memoryAPI?.usedJSHeapSize;
+import { type AsyncDuckDB, runQuery } from 'duckdb-wasm-kit';
+import prettyBytes from 'pretty-bytes';
+
+// Type guard for memory API
+interface PerformanceMemory {
+  jsHeapSizeLimit: number;
+  totalJSHeapSize: number;
+  usedJSHeapSize: number;
+}
+
+function hasMemoryAPI(perf: Performance): perf is Performance & { memory: PerformanceMemory } {
+  return 'memory' in perf && perf.memory !== undefined;
+}
+
+async function executeQueryWithMemoryMonitoring(db: AsyncDuckDB, query: string) {
+  const hasMemory = hasMemoryAPI(performance);
+  const beforeMemory = hasMemory ? performance.memory.usedJSHeapSize : null;
   const startTime = performance.now();
   
   const result = await runQuery(db, query);
   
-  const afterMemory = memoryAPI?.usedJSHeapSize;
+  const afterMemory = hasMemory ? performance.memory.usedJSHeapSize : null;
   const endTime = performance.now();
   
   // Only calculate delta if both measurements are available
-  if (beforeMemory && afterMemory) {
+  if (beforeMemory !== null && afterMemory !== null) {
     console.log({
       executionTime: `${(endTime - startTime).toFixed(2)}ms`,
       memoryDelta: prettyBytes(afterMemory - beforeMemory),
