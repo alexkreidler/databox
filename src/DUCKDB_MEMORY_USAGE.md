@@ -30,7 +30,9 @@ import { useDuckDb, runQuery } from 'duckdb-wasm-kit';
 
 async function getDuckDBMemoryLimit() {
   const { db } = useDuckDb();
-  if (!db) return null;
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
   
   try {
     // runQuery handles connection management internally
@@ -38,7 +40,7 @@ async function getDuckDBMemoryLimit() {
     return result;
   } catch (error) {
     console.error('Error fetching memory limit:', error);
-    return null;
+    throw new Error(`Failed to fetch memory limit: ${error.message}`);
   }
 }
 ```
@@ -61,11 +63,16 @@ This returns settings such as:
 import { runQuery, type AsyncDuckDB } from 'duckdb-wasm-kit';
 
 async function getDuckDBMemorySettings(db: AsyncDuckDB) {
-  const result = await runQuery(
-    db, 
-    "SELECT * FROM duckdb_settings() WHERE name LIKE '%memory%'"
-  );
-  return result;
+  try {
+    const result = await runQuery(
+      db, 
+      "SELECT * FROM duckdb_settings() WHERE name LIKE '%memory%'"
+    );
+    return result;
+  } catch (error) {
+    console.error('Error fetching memory settings:', error);
+    throw new Error(`Failed to fetch memory settings: ${error.message}`);
+  }
 }
 ```
 
@@ -132,20 +139,12 @@ export const DuckDBMemoryStats = () => {
     if (!db) return null;
     
     try {
-      // Get memory limit
-      const memoryLimitResult = await runQuery(db, 'PRAGMA memory_limit');
-      
-      // Get all memory-related settings
-      const settingsResult = await runQuery(
-        db, 
-        "SELECT * FROM duckdb_settings() WHERE name LIKE '%memory%'"
-      );
-      
-      // Get database statistics
-      const dbStatsResult = await runQuery(
-        db,
-        'SELECT * FROM duckdb_tables()'
-      );
+      // Run queries in parallel for better performance
+      const [memoryLimitResult, settingsResult, dbStatsResult] = await Promise.all([
+        runQuery(db, 'PRAGMA memory_limit'),
+        runQuery(db, "SELECT * FROM duckdb_settings() WHERE name LIKE '%memory%'"),
+        runQuery(db, 'SELECT * FROM duckdb_tables()')
+      ]);
       
       return {
         memoryLimit: memoryLimitResult,
@@ -200,7 +199,11 @@ When cross-origin isolation is enabled (`crossOriginIsolated` is true), you get 
 Use the Storage API to monitor OPFS (Origin Private File System) usage:
 
 ```typescript
-const estimate = await navigator.storage.estimate();
+const estimate = await navigator.storage?.estimate();
+if (!estimate) {
+  console.log('Storage API not supported');
+  return;
+}
 const usage = estimate.usage || 0;
 const quota = estimate.quota || 0;
 console.log(`Using ${prettyBytes(usage)} of ${prettyBytes(quota)}`);
