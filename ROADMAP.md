@@ -8,3 +8,4 @@
 - [ ] Support more input file types
 - [ ] Autocomplete SQL
 - [ ] LLM-powered text-to-SQL (GPT, Claude, Groq etc)
+- [ ] sorting/filtering?
